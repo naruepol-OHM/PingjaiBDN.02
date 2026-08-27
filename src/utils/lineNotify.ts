@@ -14,6 +14,7 @@ export interface LineNotifyPayload {
   appointmentDate: string;
   appointmentTimeSlot: string;
   timestamp: string;
+  fullAppointment?: Appointment;
 }
 
 /**
@@ -62,7 +63,8 @@ export const buildLineNotifyPayload = (
     counselorName: appointment.counselorName,
     appointmentDate: appointment.appointmentDate,
     appointmentTimeSlot: appointment.appointmentTimeSlot,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    fullAppointment: appointment
   };
 };
 

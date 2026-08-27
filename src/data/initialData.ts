@@ -725,8 +725,8 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
 ];
 
 export const INITIAL_LINE_SETTINGS: LineSettings = {
-  webhookUrl: 'https://notify-api.line.me/api/notify',
-  lineNotifyToken: 'BDN_PINGJAI_SECURE_TOKEN_2026',
+  webhookUrl: 'https://bodinnonpingjai.netlify.app/.netlify/functions/line-webhook',
+  lineNotifyToken: 'E/GiX+b1r+tvJInDmDOY+/rXwEzsOGC6ZovluttD7NsEBE6Tk4KJDpfDrrwvtVDYHmWWCFrwZ75EfPgO1wRQpRL67u/VhmqJa0bKxp0JNEhmO4C5tFrhOkP3Wrr2YISLjohrpIOrkHAJ2CwOSyYzVgdB04t89/1O/w1cDnyilFU=',
   enableStudentAlert: true,
   enableTeacherAlert: true,
   autoSendOnBooking: true,
