@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-slate-900 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* BDN Blue-Sky-Pink Brand Gradients */
+.bg-bdn-gradient {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 35%, #0284c7 70%, #be185d 100%);
+}
+
+.bg-bdn-ambient {
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(30, 58, 138, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(2, 132, 199, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(244, 63, 94, 0.14) 0%, transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #fdf2f8 100%);
+}
+
+.bg-bdn-hero-mesh {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.22) 0%, transparent 55%),
+    radial-gradient(circle at 50% 90%, rgba(236, 72, 153, 0.16) 0%, transparent 50%),
+    linear-gradient(135deg, #eff6ff 0%, #f0fdfa 45%, #fff1f2 100%);
+}
+
+.text-bdn-gradient {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #e11d48 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.border-bdn-gradient {
+  border-image: linear-gradient(to right, #2563eb, #38bdf8, #f43f5e) 1;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+
+@layer base {
+  body {
+    font-family: 'Prompt', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
