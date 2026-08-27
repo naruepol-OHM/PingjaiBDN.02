@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Search,
@@ -17,9 +17,12 @@ import {
   RefreshCw,
   BellRing,
   Send,
-  Printer
+  Printer,
+  Loader2
 } from 'lucide-react';
 import { Appointment, AppointmentStatus } from '../types';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export const TrackingView: React.FC = () => {
   const {
@@ -34,49 +37,87 @@ export const TrackingView: React.FC = () => {
 
   const [searchCode, setSearchCode] = useState(trackingQuery || '');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [messageToTeacher, setMessageToTeacher] = useState('');
   const [messageSentSuccess, setMessageSentSuccess] = useState(false);
 
-  // Auto-search if query exists in context
-  useEffect(() => {
-    if (trackingQuery) {
-      setSearchCode(trackingQuery);
-      performSearch(trackingQuery);
-    } else if (appointments.length > 0) {
-      // Default to first appointment for convenience
-      setSelectedAppointment(appointments[0]);
-    }
-  }, [trackingQuery, appointments]);
-
-  const performSearch = (query: string) => {
-    const q = query.trim().toUpperCase();
+  const performSearch = useCallback(async (queryStr: string, showToastOnNotFound = false) => {
+    const q = queryStr.trim().toUpperCase();
     if (!q) return;
 
-    const found = appointments.find(
+    setIsSearching(true);
+
+    // 1. Check in-memory appointments
+    const foundInMemory = appointments.find(
       (a) =>
         a.trackingCode.toUpperCase().includes(q) ||
         (a.studentIdNumber && a.studentIdNumber.includes(q)) ||
-        a.contactPhone.replace(/\D/g, '').includes(q.replace(/\D/g, ''))
+        a.contactPhone.replace(/\D/g, '').includes(q.replace(/\D/g, '')) ||
+        a.id === q
     );
 
-    if (found) {
-      setSelectedAppointment(found);
-    } else {
+    if (foundInMemory) {
+      setSelectedAppointment(foundInMemory);
+      setIsSearching(false);
+      return;
+    }
+
+    // 2. Direct Firestore fallback query (especially useful when opened directly on mobile from LINE)
+    try {
+      // Query by exact trackingCode
+      const trackingQ = query(
+        collection(db, 'appointments'),
+        where('trackingCode', '==', q)
+      );
+      const snapshot = await getDocs(trackingQ);
+
+      if (!snapshot.empty) {
+        const aptDoc = snapshot.docs[0];
+        setSelectedAppointment(aptDoc.data() as Appointment);
+        setIsSearching(false);
+        return;
+      }
+
+      // Try by document ID
+      const directDoc = await getDoc(doc(db, 'appointments', q));
+      if (directDoc.exists()) {
+        setSelectedAppointment(directDoc.data() as Appointment);
+        setIsSearching(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Firestore tracking search error:', err);
+    }
+
+    // If still not found
+    setIsSearching(false);
+    if (showToastOnNotFound) {
       setSelectedAppointment(null);
       addToast({
         type: 'warning',
         title: 'ไม่พบข้อมูลการนัดหมาย',
-        message: `ไม่พบรหัสนัดหมาย "${query}" กรุณาตรวจสอบรหัสอีกครั้ง`
+        message: `ไม่พบรหัสนัดหมาย "${queryStr}" กรุณาตรวจสอบรหัสอีกครั้ง`
       });
     }
-  };
+  }, [appointments, addToast]);
+
+  // Auto-search if query exists in context or from URL
+  useEffect(() => {
+    if (trackingQuery) {
+      setSearchCode(trackingQuery);
+      performSearch(trackingQuery, false);
+    } else if (appointments.length > 0 && !selectedAppointment) {
+      // Default to first appointment for convenience
+      setSelectedAppointment(appointments[0]);
+    }
+  }, [trackingQuery, appointments, performSearch, selectedAppointment]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    performSearch(searchCode);
+    performSearch(searchCode, true);
   };
 
   const handleCopyCode = (code: string) => {
@@ -186,10 +227,20 @@ export const TrackingView: React.FC = () => {
           <button
             type="submit"
             id="tracking-submit-btn"
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            disabled={isSearching}
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-600 text-white rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <Search className="w-3.5 h-3.5" />
-            ค้นหาสถานะ
+            {isSearching ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                กำลังค้นหา...
+              </>
+            ) : (
+              <>
+                <Search className="w-3.5 h-3.5" />
+                ค้นหาสถานะ
+              </>
+            )}
           </button>
         </form>
 

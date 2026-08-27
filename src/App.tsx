@@ -24,6 +24,117 @@ import {
   Sparkles
 } from 'lucide-react';
 
+const parseMobileParams = () => {
+  if (typeof window === 'undefined') return { code: null, action: null, tab: null };
+
+  const url = window.location.href;
+  const searchParams = new URLSearchParams(window.location.search);
+
+  // Also parse hash params if present (e.g. #/?action=confirm&code=...)
+  let hashParams = new URLSearchParams();
+  if (window.location.hash) {
+    const hashStr = window.location.hash.substring(1);
+    const qIndex = hashStr.indexOf('?');
+    if (qIndex !== -1) {
+      hashParams = new URLSearchParams(hashStr.substring(qIndex + 1));
+    } else if (hashStr.includes('=')) {
+      hashParams = new URLSearchParams(hashStr);
+    }
+  }
+
+  // Multi-alias detection for tracking code
+  let rawCode =
+    searchParams.get('code') ||
+    searchParams.get('confirmCode') ||
+    searchParams.get('trackingCode') ||
+    searchParams.get('tracking_code') ||
+    searchParams.get('track') ||
+    searchParams.get('tracking') ||
+    searchParams.get('id') ||
+    searchParams.get('c') ||
+    hashParams.get('code') ||
+    hashParams.get('confirmCode') ||
+    hashParams.get('trackingCode') ||
+    hashParams.get('tracking_code') ||
+    hashParams.get('track') ||
+    hashParams.get('tracking') ||
+    hashParams.get('id') ||
+    hashParams.get('c');
+
+  // Regex fallback in case the URL was truncated or formatted by an in-app browser
+  if (!rawCode) {
+    const bdnMatch = url.match(/BDN-[A-Za-z0-9-]+/i);
+    if (bdnMatch) {
+      rawCode = bdnMatch[0];
+    } else {
+      const aptMatch = url.match(/apt-\d+/i);
+      if (aptMatch) {
+        rawCode = aptMatch[0];
+      }
+    }
+  }
+
+  let cleanCode: string | null = null;
+  if (rawCode) {
+    try {
+      cleanCode = decodeURIComponent(rawCode)
+        .trim()
+        .replace(/[\s\t\r\n]+/g, '')
+        .replace(/[.,;:!?)+}\]\/]+$/, '')
+        .toUpperCase();
+    } catch {
+      cleanCode = rawCode.trim().toUpperCase();
+    }
+  }
+
+  // Multi-alias detection for teacher actions
+  const rawAction = (
+    searchParams.get('action') ||
+    searchParams.get('act') ||
+    searchParams.get('status') ||
+    searchParams.get('a') ||
+    hashParams.get('action') ||
+    hashParams.get('act') ||
+    hashParams.get('status') ||
+    hashParams.get('a') ||
+    (searchParams.has('confirmCode') ? 'confirm' : '')
+  ).toLowerCase().trim();
+
+  // Multi-alias detection for navigation tabs
+  const rawTab = (
+    searchParams.get('tab') ||
+    searchParams.get('page') ||
+    searchParams.get('view') ||
+    searchParams.get('t') ||
+    hashParams.get('tab') ||
+    hashParams.get('page') ||
+    hashParams.get('view') ||
+    hashParams.get('t') ||
+    ''
+  ).toLowerCase().trim();
+
+  let parsedAction: 'confirm' | 'in_session' | 'complete' | 'reschedule' | null = null;
+  if (rawAction) {
+    if (['confirm', 'confirmed', 'accept', 'approve', 'manage'].includes(rawAction)) {
+      parsedAction = 'confirm';
+    } else if (['in_session', 'in_consultation', 'session', 'consulting', 'start'].includes(rawAction)) {
+      parsedAction = 'in_session';
+    } else if (['complete', 'completed', 'done', 'finish', 'close'].includes(rawAction)) {
+      parsedAction = 'complete';
+    } else if (['reschedule', 'postpone', 'change_date', 'delay', 'resched'].includes(rawAction)) {
+      parsedAction = 'reschedule';
+    } else {
+      parsedAction = 'confirm';
+    }
+  }
+
+  return {
+    code: cleanCode,
+    action: parsedAction,
+    tab: rawTab
+  };
+};
+
 const MainContent: React.FC = () => {
   const { activeTab, toasts, removeToast, schoolInfo, setActiveTab, setTrackingQuery } = useApp();
   const [counselorActionState, setCounselorActionState] = useState<{
@@ -32,30 +143,22 @@ const MainContent: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const rawAction = (params.get('action') || '').toLowerCase();
-      const code = params.get('code') || params.get('confirmCode') || params.get('trackingCode');
-      const tab = params.get('tab');
+    const { code, action, tab } = parseMobileParams();
 
-      let parsedAction: 'confirm' | 'in_session' | 'complete' | 'reschedule' = 'confirm';
-      if (rawAction === 'in_session' || rawAction === 'in_consultation' || rawAction === 'session' || rawAction === 'consulting') {
-        parsedAction = 'in_session';
-      } else if (rawAction === 'complete' || rawAction === 'completed' || rawAction === 'done' || rawAction === 'finish') {
-        parsedAction = 'complete';
-      } else if (rawAction === 'reschedule' || rawAction === 'postpone' || rawAction === 'change_date' || rawAction === 'delay') {
-        parsedAction = 'reschedule';
-      }
-
-      if (code && (params.has('action') || params.has('confirmCode'))) {
+    if (code) {
+      if (action) {
+        // Teacher direct action link from LINE
         setCounselorActionState({
           code,
-          action: parsedAction
+          action
         });
-      } else if (tab === 'tracking' && code) {
+      } else if (tab === 'tracking' || !tab || tab === 'track') {
+        // Student status check link from LINE
         setTrackingQuery(code);
         setActiveTab('tracking');
       }
+    } else if (tab && ['home', 'timetable', 'counselors', 'booking', 'tracking', 'hotlines', 'admin'].includes(tab)) {
+      setActiveTab(tab);
     }
   }, [setTrackingQuery, setActiveTab]);
 

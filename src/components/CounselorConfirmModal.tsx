@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { SchoolEmblem } from './SchoolEmblem';
 import {
@@ -26,9 +26,13 @@ import {
   AlertCircle,
   ExternalLink,
   Phone,
-  BookmarkCheck
+  BookmarkCheck,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { Appointment, TopicId, DayOfWeek, AppointmentStatus } from '../types';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface CounselorConfirmModalProps {
   confirmCode: string;
@@ -49,15 +53,18 @@ export const CounselorConfirmModal: React.FC<CounselorConfirmModalProps> = ({
     topics,
     schoolInfo,
     addToast,
-    setActiveTab
+    setActiveTab,
+    setTrackingQuery
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'confirm' | 'in_session' | 'complete' | 'reschedule'>(initialAction);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [searchAttemptCount, setSearchAttemptCount] = useState<number>(0);
 
   // Form states - Confirm
   const [teacherNote, setTeacherNote] = useState('');
-  const [meetingVenue, setMeetingVenue] = useState('ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2');
+  const [meetingVenue, setMeetingVenue] = useState('ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์');
   
   // Form states - In Session
   const [inSessionNote, setInSessionNote] = useState('');
@@ -80,34 +87,89 @@ export const CounselorConfirmModal: React.FC<CounselorConfirmModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedLinkType, setCopiedLinkType] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (confirmCode) {
-      const codeClean = confirmCode.trim().toUpperCase();
-      const found = appointments.find(
-        (a) => a.trackingCode.toUpperCase() === codeClean || a.id === confirmCode
-      );
-      if (found) {
-        setAppointment(found);
-        if (found.statusNotes) {
-          setTeacherNote(found.statusNotes);
-        }
-        // Initialize reschedule fields with appointment data
-        setNewDate(found.appointmentDate || '');
-        setNewDay(found.appointmentDay || 'จันทร์');
-        setNewTimeSlot(found.appointmentTimeSlot || '11.10 - 12.00 น.');
-
-        // Initialize case summary fields if already exist
-        if (found.caseSummary) {
-          setKeyIssues(found.caseSummary.keyIssues || '');
-          setSessionSummary(found.caseSummary.sessionSummary || '');
-          setActionPlan(found.caseSummary.actionPlan || '');
-          setFollowUpNeeded(found.caseSummary.followUpNeeded || false);
-          setFollowUpDate(found.caseSummary.followUpDate || '');
-          setUrgencyLevel(found.caseSummary.urgencyLevel || 'normal');
-        }
-      }
+  const populateAppointmentForm = useCallback((apt: Appointment) => {
+    setAppointment(apt);
+    if (apt.statusNotes) {
+      setTeacherNote(apt.statusNotes);
     }
-  }, [confirmCode, appointments]);
+    if (apt.meetingLocation) {
+      setMeetingVenue(apt.meetingLocation);
+    } else {
+      setMeetingVenue('ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์');
+    }
+    // Initialize reschedule fields with appointment data
+    setNewDate(apt.appointmentDate || '');
+    setNewDay(apt.appointmentDay || 'จันทร์');
+    setNewTimeSlot(apt.appointmentTimeSlot || '11.10 - 12.00 น.');
+
+    // Initialize case summary fields if already exist
+    if (apt.caseSummary) {
+      setKeyIssues(apt.caseSummary.keyIssues || '');
+      setSessionSummary(apt.caseSummary.sessionSummary || '');
+      setActionPlan(apt.caseSummary.actionPlan || '');
+      setFollowUpNeeded(apt.caseSummary.followUpNeeded || false);
+      setFollowUpDate(apt.caseSummary.followUpDate || '');
+      setUrgencyLevel(apt.caseSummary.urgencyLevel || 'normal');
+    }
+  }, []);
+
+  // Search logic: checks memory first, then Firestore directly
+  const fetchAppointmentData = useCallback(async () => {
+    if (!confirmCode) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const codeClean = confirmCode.trim().toUpperCase();
+
+    // 1. Check in-memory appointments
+    const foundInMemory = appointments.find(
+      (a) => a.trackingCode.toUpperCase() === codeClean || a.id === confirmCode
+    );
+
+    if (foundInMemory) {
+      populateAppointmentForm(foundInMemory);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. Direct Firestore query fallback (in case page was directly opened on mobile from LINE notification)
+    try {
+      // Try by trackingCode
+      const aptQuery = query(
+        collection(db, 'appointments'),
+        where('trackingCode', '==', codeClean)
+      );
+      const snapshot = await getDocs(aptQuery);
+
+      if (!snapshot.empty) {
+        const aptDoc = snapshot.docs[0];
+        const aptData = aptDoc.data() as Appointment;
+        populateAppointmentForm(aptData);
+        setIsLoading(false);
+        return;
+      }
+
+      // Try by doc ID
+      const directDoc = await getDoc(doc(db, 'appointments', confirmCode));
+      if (directDoc.exists()) {
+        const aptData = directDoc.data() as Appointment;
+        populateAppointmentForm(aptData);
+        setIsLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Direct Firestore appointment lookup error:', err);
+    }
+
+    // Not found yet
+    setIsLoading(false);
+  }, [confirmCode, appointments, populateAppointmentForm]);
+
+  useEffect(() => {
+    fetchAppointmentData();
+  }, [fetchAppointmentData, searchAttemptCount]);
 
   useEffect(() => {
     if (initialAction) {
@@ -115,22 +177,62 @@ export const CounselorConfirmModal: React.FC<CounselorConfirmModalProps> = ({
     }
   }, [initialAction]);
 
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center mx-auto shadow-inner">
+            <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">กำลังเชื่อมต่อข้อมูลนัดหมาย</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              กำลังค้นหารหัส <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{confirmCode}</span> ในระบบศูนย์พิงใจ...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!appointment) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
-        <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-6 h-6" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+            <AlertTriangle className="w-7 h-7 text-rose-500" />
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900">ไม่พบข้อมูลรหัสนัดหมาย</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              รหัส <span className="font-mono font-bold text-slate-800">{confirmCode}</span> อาจไม่ถูกต้องหรือถูกลบออกจากระบบแล้ว
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              ไม่พบข้อมูลของรหัส <span className="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{confirmCode}</span>
             </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              หากเพิ่งสร้างนัดหมาย กรุณากดปุ่ม "ลองโหลดใหม่อีกครั้ง" หรือตรวจสอบรหัสผ่านหน้าติดตามสถานะ
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <button
+              onClick={() => setSearchAttemptCount((c) => c + 1)}
+              className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              ลองโหลดใหม่อีกครั้ง
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                setTrackingQuery(confirmCode);
+                setActiveTab('tracking');
+              }}
+              className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+            >
+              ดูหน้าติดตามสถานะ
+            </button>
           </div>
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+            className="w-full py-2 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer transition-colors"
           >
             ปิดหน้าต่างนี้
           </button>
