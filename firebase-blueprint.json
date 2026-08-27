@@ -1,0 +1,137 @@
+{
+  "entities": {
+    "Counselor": {
+      "title": "Counselor",
+      "description": "School counselor or teacher providing consultation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "department": { "type": "string" },
+        "topicIds": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "availableDays": { "type": "array" },
+        "phone": { "type": "string" },
+        "lineId": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "topicIds", "isActive"]
+    },
+    "Topic": {
+      "title": "Topic",
+      "description": "Counseling scope topics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "numericId": { "type": "number" },
+        "title": { "type": "string" },
+        "shortDescription": { "type": "string" },
+        "scopeDescription": { "type": "string" },
+        "iconName": { "type": "string" },
+        "color": { "type": "string" },
+        "bgColor": { "type": "string" },
+        "borderColor": { "type": "string" },
+        "badgeColor": { "type": "string" }
+      },
+      "required": ["title", "scopeDescription"]
+    },
+    "TimetableEntry": {
+      "title": "TimetableEntry",
+      "description": "Weekly counseling timetable schedule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "juniorTopicId": { "type": "string" },
+        "juniorTimeSlot": { "type": "string" },
+        "seniorTopicId": { "type": "string" },
+        "seniorTimeSlot": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["day", "juniorTopicId", "seniorTopicId"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Student booking appointment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trackingCode": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentNickname": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "studentGrade": { "type": "string" },
+        "studentRoom": { "type": "string" },
+        "studentIdNumber": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactLineId": { "type": "string" },
+        "topicId": { "type": "string" },
+        "counselorId": { "type": "string" },
+        "counselorName": { "type": "string" },
+        "gradeLevel": { "type": "string" },
+        "appointmentDate": { "type": "string" },
+        "appointmentDay": { "type": "string" },
+        "appointmentTimeSlot": { "type": "string" },
+        "meetingFormat": { "type": "string" },
+        "briefIssueDescription": { "type": "string" },
+        "status": { "type": "string" },
+        "statusNotes": { "type": "string" }
+      },
+      "required": ["trackingCode", "studentName", "topicId", "counselorName", "status"]
+    },
+    "SchoolInfo": {
+      "title": "SchoolInfo",
+      "description": "School and center branding information",
+      "type": "object",
+      "properties": {
+        "schoolName": { "type": "string" },
+        "centerName": { "type": "string" },
+        "shortName": { "type": "string" },
+        "slogan": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "LineSettings": {
+      "title": "LineSettings",
+      "description": "LINE webhook configuration",
+      "type": "object",
+      "properties": {
+        "webhookUrl": { "type": "string" },
+        "lineNotifyToken": { "type": "string" },
+        "enableStudentAlert": { "type": "boolean" },
+        "enableTeacherAlert": { "type": "boolean" },
+        "autoSendOnBooking": { "type": "boolean" },
+        "autoSendOnStatusChange": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/counselors/{counselorId}": {
+      "schema": "Counselor",
+      "description": "Collection of teachers and counselors"
+    },
+    "/topics/{topicId}": {
+      "schema": "Topic",
+      "description": "Collection of counseling scope topics"
+    },
+    "/timetable/{timetableId}": {
+      "schema": "TimetableEntry",
+      "description": "Weekly timetable entries"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Student booking appointments and tracking records"
+    },
+    "/settings/schoolInfo": {
+      "schema": "SchoolInfo",
+      "description": "School and center branding settings"
+    },
+    "/settings/lineSettings": {
+      "schema": "LineSettings",
+      "description": "LINE notification settings"
+    }
+  }
+}
