@@ -65,11 +65,14 @@ export const BookingForm: React.FC = () => {
   const [contactPhone, setContactPhone] = useState<string>('');
   const [contactLineId, setContactLineId] = useState<string>('');
   const [meetingFormat, setMeetingFormat] = useState<'in_person' | 'online' | 'phone'>('in_person');
+  const [meetingLocation, setMeetingLocation] = useState<string>('ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์');
+  const [customLocationInput, setCustomLocationInput] = useState<string>('');
   const [briefIssueDescription, setBriefIssueDescription] = useState<string>('');
 
   // Result state
   const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter counselors by selected topic
   const filteredCounselors = counselors.filter(
@@ -163,7 +166,7 @@ export const BookingForm: React.FC = () => {
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedCounselor) {
@@ -194,48 +197,57 @@ export const BookingForm: React.FC = () => {
       return;
     }
 
-    const calculatedDate = calculateTargetDate(selectedDay);
+    setIsSubmitting(true);
 
-    const displayName = isAnonymous
-      ? `นักเรียนไม่ประสงค์ออกนาม (${studentNickname ? `ชื่อเล่น: ${studentNickname}` : 'นิรนาม'})`
-      : studentName.trim();
-
-    const appointment = createAppointment({
-      studentName: displayName,
-      studentNickname: studentNickname.trim() || undefined,
-      isAnonymous,
-      studentGrade,
-      studentRoom: studentRoom.trim() || undefined,
-      studentIdNumber: studentIdNumber.trim() || undefined,
-      contactPhone: contactPhone.trim() || '08x-xxx-xxxx',
-      contactLineId: contactLineId.trim() || undefined,
-      topicId,
-      counselorId: selectedCounselor.id,
-      counselorName: selectedCounselor.name,
-      gradeLevel,
-      appointmentDate: calculatedDate,
-      appointmentDay: selectedDay,
-      appointmentTimeSlot: timeSlot,
-      meetingFormat,
-      briefIssueDescription: briefIssueDescription.trim() || 'ขอรับคำปรึกษาทั่วไป',
-      statusNotes: 'รอครูผู้ให้คำปรึกษาตรวจสอบและยืนยันนัดหมาย'
-    });
-
-    setCreatedAppointment(appointment);
-    setCurrentStep(5);
-
-    // Fire celebratory confetti!
     try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch {
-      // Ignored if canvas context fails
-    }
+      const calculatedDate = calculateTargetDate(selectedDay);
 
-    window.scrollTo({ top: 80, behavior: 'smooth' });
+      const displayName = isAnonymous
+        ? `นักเรียนไม่ประสงค์ออกนาม (${studentNickname ? `ชื่อเล่น: ${studentNickname}` : 'นิรนาม'})`
+        : studentName.trim();
+
+      const appointment = await createAppointment({
+        studentName: displayName,
+        studentNickname: studentNickname.trim() || undefined,
+        isAnonymous,
+        studentGrade,
+        studentRoom: studentRoom.trim() || undefined,
+        studentIdNumber: studentIdNumber.trim() || undefined,
+        contactPhone: contactPhone.trim() || '08x-xxx-xxxx',
+        contactLineId: contactLineId.trim() || undefined,
+        topicId,
+        counselorId: selectedCounselor.id,
+        counselorName: selectedCounselor.name,
+        gradeLevel,
+        appointmentDate: calculatedDate,
+        appointmentDay: selectedDay,
+        appointmentTimeSlot: timeSlot,
+        meetingFormat,
+        meetingLocation: meetingFormat === 'in_person' ? (meetingLocation === 'custom' ? (customLocationInput.trim() || 'สถานที่ที่นักเรียนระบุ') : meetingLocation) : undefined,
+        briefIssueDescription: briefIssueDescription.trim() || 'ขอรับคำปรึกษาทั่วไป',
+        statusNotes: meetingFormat === 'in_person' ? `สถานที่นัดพบ: ${meetingLocation === 'custom' ? (customLocationInput.trim() || 'สถานที่ที่นักเรียนระบุ') : meetingLocation}` : 'รอครูผู้ให้คำปรึกษาตรวจสอบและยืนยันนัดหมาย'
+      });
+
+      setCreatedAppointment(appointment);
+      setCurrentStep(5);
+
+      // Fire celebratory confetti!
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      } catch {
+        // Ignored if canvas context fails
+      }
+
+      window.scrollTo({ top: 80, behavior: 'smooth' });
+    } catch (err) {
+      console.error('Error submitting appointment:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopyCode = () => {
@@ -527,8 +539,8 @@ export const BookingForm: React.FC = () => {
                     <span className="text-xs sm:text-sm font-bold text-slate-900">{timeSlot}</span>
                     <p className="text-xs text-slate-500">
                       {gradeLevel === 'm_junior'
-                        ? 'ช่วงพักกลางวัน ม.ต้น (ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2)'
-                        : 'ช่วงพักกลางวัน ม.ปลาย (ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2)'}
+                        ? 'ช่วงพักกลางวัน ม.ต้น (ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์)'
+                        : 'ช่วงพักกลางวัน ม.ปลาย (ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์)'}
                     </p>
                   </div>
                 </div>
@@ -540,33 +552,33 @@ export const BookingForm: React.FC = () => {
           </div>
 
           {/* Meeting Format */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-700">
               ช่องทางการรับคำปรึกษาที่สะดวก:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
                 onClick={() => setMeetingFormat('in_person')}
-                className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                   meetingFormat === 'in_person'
-                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900'
+                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900 ring-1 ring-slate-900'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4 text-slate-700" />
-                  <span className="text-xs font-bold">พบตัวจริงที่ศูนย์พิงใจ</span>
+                  <span className="text-xs font-bold">พบตัวจริงที่โรงเรียน</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">อาคาร 1 ชั้น 2 (เป็นส่วนตัว)</p>
+                <p className="text-[11px] text-slate-500 mt-1">อาคารประชาสัมพันธ์ (เป็นส่วนตัว)</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setMeetingFormat('online')}
-                className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                   meetingFormat === 'online'
-                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900'
+                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900 ring-1 ring-slate-900'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
@@ -580,9 +592,9 @@ export const BookingForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMeetingFormat('phone')}
-                className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                   meetingFormat === 'phone'
-                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900'
+                    ? 'border-slate-900 bg-slate-50 font-bold text-slate-900 ring-1 ring-slate-900'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
@@ -593,6 +605,123 @@ export const BookingForm: React.FC = () => {
                 <p className="text-[11px] text-slate-500 mt-1">ครูโทรติดต่อตามเวลา</p>
               </button>
             </div>
+
+            {/* Custom / Selectable Location for In-Person meetings */}
+            {meetingFormat === 'in_person' && (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 animate-fade-in mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Building className="w-3.5 h-3.5 text-slate-700" />
+                    เลือกหรือปรับเปลี่ยนสถานที่นัดพบ (ตามความสะดวกของนักเรียน):
+                  </span>
+                  <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                    ปลอดภัย & สบายใจ
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                      meetingLocation === 'ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์'
+                        ? 'border-slate-900 bg-white font-semibold text-slate-900 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="meeting-location-radio"
+                      checked={meetingLocation === 'ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์'}
+                      onChange={() => setMeetingLocation('ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์')}
+                      className="mt-0.5 accent-slate-900"
+                    />
+                    <div>
+                      <div className="font-semibold">ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์</div>
+                      <div className="text-[11px] text-slate-500 font-normal">
+                        แนะนำ — พื้นที่ปลอดภัย เป็นส่วนตัว มีบรรยากาศผ่อนคลาย
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                      meetingLocation === 'ห้องแนะแนว อาคาร 1'
+                        ? 'border-slate-900 bg-white font-semibold text-slate-900 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="meeting-location-radio"
+                      checked={meetingLocation === 'ห้องแนะแนว อาคาร 1'}
+                      onChange={() => setMeetingLocation('ห้องแนะแนว อาคาร 1')}
+                      className="mt-0.5 accent-slate-900"
+                    />
+                    <div>
+                      <div className="font-semibold">ห้องแนะแนว อาคาร 1</div>
+                      <div className="text-[11px] text-slate-500 font-normal">
+                        ห้องพักครูแนะแนว / ห้องกิจกรรมพัฒนาผู้เรียน
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                      meetingLocation === 'ศาลาเรือนไทย / ลานกิจกรรมสงบ'
+                        ? 'border-slate-900 bg-white font-semibold text-slate-900 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="meeting-location-radio"
+                      checked={meetingLocation === 'ศาลาเรือนไทย / ลานกิจกรรมสงบ'}
+                      onChange={() => setMeetingLocation('ศาลาเรือนไทย / ลานกิจกรรมสงบ')}
+                      className="mt-0.5 accent-slate-900"
+                    />
+                    <div>
+                      <div className="font-semibold">ศาลาเรือนไทย / ลานสงบ</div>
+                      <div className="text-[11px] text-slate-500 font-normal">
+                        พื้นที่เปิดโล่ง อากาศถ่ายเท บรรยากาศร่มรื่น
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                      meetingLocation === 'custom'
+                        ? 'border-slate-900 bg-white font-semibold text-slate-900 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="meeting-location-radio"
+                      checked={meetingLocation === 'custom'}
+                      onChange={() => setMeetingLocation('custom')}
+                      className="mt-0.5 accent-slate-900"
+                    />
+                    <div className="w-full">
+                      <div className="font-semibold">ระบุสถานที่อื่นที่นักเรียนสะดวก</div>
+                      <div className="text-[11px] text-slate-500 font-normal">
+                        เช่น ม้านั่งหน้าห้องสมุด, โรงอาหาร ฯลฯ
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {meetingLocation === 'custom' && (
+                  <div className="pt-2 animate-fade-in">
+                    <input
+                      type="text"
+                      value={customLocationInput}
+                      onChange={(e) => setCustomLocationInput(e.target.value)}
+                      placeholder="พิมพ์สถานที่นัดพบที่ต้องการ (เช่น โต๊ะหินอ่อนข้างเสาธง, หน้าร้านค้าสหกรณ์)..."
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900 text-slate-800 font-medium placeholder:font-normal"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -921,7 +1050,7 @@ export const BookingForm: React.FC = () => {
                 <div>
                   <strong>รูปแบบ:</strong>{' '}
                   {meetingFormat === 'in_person'
-                    ? 'พบตัวจริงที่ห้องศูนย์พิงใจ (อาคาร 1 ชั้น 2)'
+                    ? `พบตัวจริง (${meetingLocation === 'custom' ? (customLocationInput || 'สถานที่ที่ระบุ') : meetingLocation})`
                     : meetingFormat === 'online'
                     ? 'ออนไลน์ผ่านระบบ'
                     : 'โทรศัพท์'}
@@ -942,10 +1071,13 @@ export const BookingForm: React.FC = () => {
             <button
               id="booking-confirm-submit-btn"
               type="submit"
-              className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer ${
+                isSubmitting ? 'opacity-70 cursor-wait' : ''
+              }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-rose-300" />
-              ยืนยันการลงทะเบียนนัดหมาย
+              <Sparkles className={`w-3.5 h-3.5 text-rose-300 ${isSubmitting ? 'animate-spin' : ''}`} />
+              {isSubmitting ? 'กำลังบันทึกและส่งแจ้งเตือน...' : 'ยืนยันการลงทะเบียนนัดหมาย'}
             </button>
           </div>
         </form>

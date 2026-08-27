@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { compressImageFile, COUNSELOR_PRESET_AVATARS } from '../../utils/imageUtils';
+import { ImageAdjustModal } from './ImageAdjustModal';
 import {
   Users,
   Plus,
@@ -14,7 +15,9 @@ import {
   Upload,
   Sparkles,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  Sliders,
+  Maximize2
 } from 'lucide-react';
 import { Counselor, TopicId } from '../../types';
 
@@ -27,6 +30,7 @@ export const TeacherManager: React.FC = () => {
   const [editingCounselor, setEditingCounselor] = useState<Counselor | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -249,7 +253,7 @@ export const TeacherManager: React.FC = () => {
                   )}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -257,19 +261,32 @@ export const TeacherManager: React.FC = () => {
                     onChange={handleImageFileUpload}
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingPhoto}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
-                  >
-                    {isUploadingPhoto ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
-                    )}
-                    {isUploadingPhoto ? 'กำลังโหลดรูปภาพ...' : 'อัปโหลดรูปจากเครื่อง'}
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingPhoto}
+                      className="px-2.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                    >
+                      {isUploadingPhoto ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      {isUploadingPhoto ? 'โหลด...' : 'อัปโหลดรูป'}
+                    </button>
+
+                    <button
+                      id="open-adjust-photo-modal-btn"
+                      type="button"
+                      onClick={() => setIsAdjustModalOpen(true)}
+                      className="px-2.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                      title="เลื่อนปรับขนาด ซูมเข้า-ออก หรือหมุนรูปถ่าย"
+                    >
+                      <Sliders className="w-3.5 h-3.5 text-rose-300" />
+                      เลื่อน/ปรับขนาด
+                    </button>
+                  </div>
                 </div>
 
                 {/* Preset Avatars Picker */}
@@ -564,6 +581,25 @@ export const TeacherManager: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Image Adjust and Crop Modal */}
+      {isAdjustModalOpen && (
+        <ImageAdjustModal
+          isOpen={isAdjustModalOpen}
+          onClose={() => setIsAdjustModalOpen(false)}
+          imageUrl={imageUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400'}
+          onSave={(adjustedUrl) => {
+            setImageUrl(adjustedUrl);
+            addToast({
+              type: 'success',
+              title: 'ปรับแต่งรูปถ่ายเรียบร้อย',
+              message: 'รูปถ่ายถูกย่อ/ขยายและจัดตำแหน่งพร้อมใช้งานแล้ว'
+            });
+          }}
+          aspectRatio="4:3"
+          title={`ปรับขนาดรูปถ่าย: ${name || 'คุณครู'}`}
+        />
+      )}
     </div>
   );
 };

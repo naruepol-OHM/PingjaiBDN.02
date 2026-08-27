@@ -27,6 +27,17 @@ export const LineSettingsManager: React.FC = () => {
   const [autoSendOnBooking, setAutoSendOnBooking] = useState(lineSettings.autoSendOnBooking);
   const [autoSendOnStatusChange, setAutoSendOnStatusChange] = useState(lineSettings.autoSendOnStatusChange);
 
+  React.useEffect(() => {
+    if (lineSettings) {
+      setWebhookUrl(lineSettings.webhookUrl || '');
+      setLineNotifyToken(lineSettings.lineNotifyToken || '');
+      setEnableStudentAlert(lineSettings.enableStudentAlert ?? true);
+      setEnableTeacherAlert(lineSettings.enableTeacherAlert ?? true);
+      setAutoSendOnBooking(lineSettings.autoSendOnBooking ?? true);
+      setAutoSendOnStatusChange(lineSettings.autoSendOnStatusChange ?? true);
+    }
+  }, [lineSettings]);
+
   const [testSent, setTestSent] = useState(false);
   const [testConfirmModalCode, setTestConfirmModalCode] = useState<string | null>(null);
 
@@ -47,16 +58,42 @@ export const LineSettingsManager: React.FC = () => {
   };
 
   const handleSendTestNotification = async () => {
-    if (appointments.length > 0) {
-      await sendLineNotification(appointments[0], 'NEW_BOOKING');
-    }
+    const testAppointment = appointments.length > 0 ? appointments[0] : {
+      id: 'test-sample',
+      trackingCode: 'BDN-TEST-2026',
+      studentName: 'นักเรียนทดสอบระบบ',
+      studentGrade: 'ม.3',
+      topicId: 'mental_health' as const,
+      counselorId: 'c1',
+      counselorName: 'ครูผู้ให้คำปรึกษาประจำศูนย์',
+      gradeLevel: 'm_junior' as const,
+      appointmentDate: '27 ส.ค. 2569',
+      appointmentDay: 'จันทร์' as const,
+      appointmentTimeSlot: '11.10 – 12.00 น.',
+      meetingFormat: 'in_person' as const,
+      status: 'pending' as const,
+      contactPhone: '089-123-4567',
+      createdAt: new Date().toISOString(),
+      lineNotificationSent: true
+    };
+
+    const res = await sendLineNotification(testAppointment, 'NEW_BOOKING');
     setTestSent(true);
     setTimeout(() => setTestSent(false), 3500);
-    addToast({
-      type: 'success',
-      title: 'ทดสอบส่งข้อความ LINE สำเร็จ',
-      message: 'ระบบได้ส่งสัญญาณแจ้งเตือนพร้อมแนบลิงก์ยืนยันนัดหมายเรียบร้อยแล้ว'
-    });
+
+    if (res.success) {
+      addToast({
+        type: 'success',
+        title: 'ทดสอบส่งข้อความ LINE สำเร็จ',
+        message: 'ระบบได้ส่งสัญญาณแจ้งเตือนเข้าห้อง LINE เรียบร้อยแล้ว'
+      });
+    } else {
+      addToast({
+        type: 'error',
+        title: 'ทดสอบส่งข้อความ LINE ไม่สำเร็จ',
+        message: res.message
+      });
+    }
   };
 
   return (

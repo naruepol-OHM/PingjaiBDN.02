@@ -5,7 +5,7 @@ export const INITIAL_SCHOOL_INFO: SchoolInfo = {
   centerName: 'ศูนย์พิทักษ์สิทธิ เสรีภาพ และความปลอดภัย "ศูนย์พิงใจ"',
   shortName: 'ศูนย์พิงใจ บ.ด.น.',
   slogan: 'เพราะทุกเรื่องที่อยากคุย มีคนพร้อมรับฟัง',
-  location: 'ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2 โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
+  location: 'ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์ โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี',
   customLogoType: 'vector',
   logoShape: 'circle',
   logoFit: 'contain',
@@ -646,12 +646,12 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     meetingFormat: 'in_person',
     briefIssueDescription: 'ต้องการปรึกษาการเตรียมสอบเข้าคณะแพทยศาสตร์และวางแผนพอร์ตโฟลิโอ TCAS รอบ 1',
     status: 'confirmed',
-    statusNotes: 'ยินดีต้อนรับครับ พบกันที่ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2',
+    statusNotes: 'ยินดีต้อนรับครับ พบกันที่ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์',
     confirmedAt: '2026-08-25T16:00:00Z',
     lineNotificationSent: true,
     lineNotificationHistory: [
       { timestamp: '2026-08-25T14:30:10Z', type: 'BOOKING_RECEIVED', message: 'ยื่นคำขอการนัดหมายรหัส BDN-2608-8821 สำเร็จ' },
-      { timestamp: '2026-08-25T16:00:00Z', type: 'STATUS_UPDATED', message: 'ครูผู้ให้คำปรึกษายืนยันการนัดหมายแล้ว สถานที่: ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2' }
+      { timestamp: '2026-08-25T16:00:00Z', type: 'STATUS_UPDATED', message: 'ครูผู้ให้คำปรึกษายืนยันการนัดหมายแล้ว สถานที่: ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์' }
     ]
   },
   {

@@ -86,6 +86,7 @@ export interface Appointment {
   appointmentDay: DayOfWeek;
   appointmentTimeSlot: string;
   meetingFormat: 'in_person' | 'online' | 'phone'; // พบตัวจริงที่ห้องศูนย์พิงใจ / ออนไลน์ / โทรศัพท์
+  meetingLocation?: string; // สถานที่นัดพบ เช่น ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์ หรือสถานที่ที่นักเรียนเลือก
   briefIssueDescription: string; // รายละเอียดเบื้องต้น
   status: AppointmentStatus;
   statusNotes?: string; // บันทึกแจ้งนักเรียน เช่น "พบกันที่ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2"

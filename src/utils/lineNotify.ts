@@ -38,7 +38,12 @@ export const buildLineNotifyPayload = (
   let msgText = '';
 
   if (actionType === 'NEW_BOOKING') {
-    msgText = `🔔 [แจ้งเตือนนัดหมายใหม่ - ศูนย์พิงใจ บ.ด.น.]\nรหัส: ${appointment.trackingCode}\nหัวข้อ: ${topicTitle}\nผู้ขอรับคำปรึกษา: ${appointment.isAnonymous ? 'ปกปิดชื่อ (ใช้นามสมมุติ)' : appointment.studentName}\nระดับชั้น: ${appointment.studentGrade} ${appointment.studentRoom ? `ห้อง ${appointment.studentRoom}` : ''}\nวัน/เวลา: ${appointment.appointmentDay} (${appointment.appointmentDate}) ${appointment.appointmentTimeSlot}\nครูที่ปรึกษา: ${appointment.counselorName}\nรูปแบบ: ${appointment.meetingFormat === 'in_person' ? 'พบตัวจริงที่ห้องศูนย์พิงใจ' : appointment.meetingFormat === 'online' ? 'ออนไลน์' : 'โทรศัพท์'}\n\n⚡ ลิงก์จัดการนัดหมายสำหรับครู (ยืนยัน/เริ่ม/เสร็จสิ้น/เลื่อนนัด):\n👉 ${manageUrl}`;
+    const locText = appointment.meetingFormat === 'in_person'
+      ? `พบตัวจริง (${appointment.meetingLocation || 'ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์'})`
+      : appointment.meetingFormat === 'online'
+      ? 'ออนไลน์'
+      : 'โทรศัพท์';
+    msgText = `🔔 [แจ้งเตือนนัดหมายใหม่ - ศูนย์พิงใจ บ.ด.น.]\nรหัส: ${appointment.trackingCode}\nหัวข้อ: ${topicTitle}\nผู้ขอรับคำปรึกษา: ${appointment.isAnonymous ? 'ปกปิดชื่อ (ใช้นามสมมุติ)' : appointment.studentName}\nระดับชั้น: ${appointment.studentGrade} ${appointment.studentRoom ? `ห้อง ${appointment.studentRoom}` : ''}\nวัน/เวลา: ${appointment.appointmentDay} (${appointment.appointmentDate}) ${appointment.appointmentTimeSlot}\nครูที่ปรึกษา: ${appointment.counselorName}\nรูปแบบ: ${locText}\n\n⚡ ลิงก์จัดการนัดหมายสำหรับครู (ยืนยัน/เริ่ม/เสร็จสิ้น/เลื่อนนัด):\n👉 ${manageUrl}`;
   } else if (actionType === 'STATUS_CHANGE') {
     const statusThai =
       appointment.status === 'confirmed' ? '✅ ยืนยันการนัดหมายแล้ว' :
@@ -48,7 +53,7 @@ export const buildLineNotifyPayload = (
 
     msgText = `📢 [อัปเดตสถานะนัดหมาย - ศูนย์พิงใจ บ.ด.น.]\nรหัส: ${appointment.trackingCode}\nสถานะใหม่: ${statusThai}\nนักเรียน: ${appointment.isAnonymous ? 'นักเรียน' : appointment.studentName} (${appointment.studentGrade})\nครูที่ปรึกษา: ${appointment.counselorName}\nวัน/เวลา: ${appointment.appointmentDay} (${appointment.appointmentDate}) ${appointment.appointmentTimeSlot}\nบันทึก: ${appointment.statusNotes || 'ไม่มีข้อความเพิ่มเติม'}\n\n⚡ ลิงก์จัดการนัดหมายสำหรับครู:\n👉 ${manageUrl}\n🔍 ดูสถานะนักเรียน: ${trackingUrl}`;
   } else {
-    msgText = `⏰ [เตือนความจำนัดหมาย - ศูนย์พิงใจ บ.ด.น.]\nรหัส: ${appointment.trackingCode}\nนัดหมายวันนี้: ${appointment.appointmentDay} (${appointment.appointmentDate}) ${appointment.appointmentTimeSlot}\nครูที่ปรึกษา: ${appointment.counselorName}\nสถานที่: ห้องศูนย์พิงใจ อาคาร 1 ชั้น 2\n\n⚡ ลิงก์จัดการนัดหมายสำหรับครู:\n👉 ${manageUrl}`;
+    msgText = `⏰ [เตือนความจำนัดหมาย - ศูนย์พิงใจ บ.ด.น.]\nรหัส: ${appointment.trackingCode}\nนัดหมายวันนี้: ${appointment.appointmentDay} (${appointment.appointmentDate}) ${appointment.appointmentTimeSlot}\nครูที่ปรึกษา: ${appointment.counselorName}\nสถานที่: ${appointment.meetingLocation || 'ห้องศูนย์พิงใจ อาคารประชาสัมพันธ์'}\n\n⚡ ลิงก์จัดการนัดหมายสำหรับครู:\n👉 ${manageUrl}`;
   }
 
   return {

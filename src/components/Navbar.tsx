@@ -45,11 +45,11 @@ export const Navbar: React.FC = () => {
 
   const navItems = [
     { id: 'home', label: 'หน้าหลัก', icon: HeartHandshake },
-    { id: 'timetable', label: 'ตารางการให้บริการ', icon: Clock },
-    { id: 'booking', label: 'ลงทะเบียนนัดหมาย', icon: Calendar, highlight: true },
-    { id: 'tracking', label: 'ติดตามสถานะ', icon: Search },
-    { id: 'counselors', label: 'รายชื่อครูที่ปรึกษา', icon: UserCheck },
-    { id: 'hotlines', label: 'สายด่วนและช่วยเหลือ', icon: PhoneCall }
+    { id: 'timetable', label: 'ตารางบริการ', fullLabel: 'ตารางการให้บริการ', icon: Clock },
+    { id: 'booking', label: 'ลงทะเบียนนัดหมาย', fullLabel: 'ลงทะเบียนนัดหมาย', icon: Calendar, highlight: true },
+    { id: 'tracking', label: 'ติดตามสถานะ', fullLabel: 'ติดตามสถานะ', icon: Search },
+    { id: 'counselors', label: 'ครูที่ปรึกษา', fullLabel: 'รายชื่อครูที่ปรึกษา', icon: UserCheck },
+    { id: 'hotlines', label: 'สายด่วนช่วยเหลือ', fullLabel: 'สายด่วนและช่วยเหลือ', icon: PhoneCall }
   ];
 
   return (
@@ -77,7 +77,7 @@ export const Navbar: React.FC = () => {
             </span>
             {isAdminAuthenticated ? (
               <div className="flex items-center gap-1.5 bg-black/25 px-2 py-0.5 rounded-md border border-white/20 text-[10px] sm:text-[11px]">
-                <Shield className="w-3 h-3 text-amber-300" />
+                <Shield className="w-3 h-3 text-amber-300 shrink-0" />
                 <span className="font-semibold text-amber-200">โหมดครู</span>
                 <button
                   id="navbar-logout-btn"
@@ -85,7 +85,7 @@ export const Navbar: React.FC = () => {
                   className="text-pink-200 hover:text-white ml-0.5 flex items-center gap-0.5 underline cursor-pointer"
                   title="ออกจากระบบครู"
                 >
-                  <LogOut className="w-3 h-3" />
+                  <LogOut className="w-3 h-3 shrink-0" />
                   ออก
                 </button>
               </div>
@@ -95,7 +95,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setActiveTab('admin')}
                 className="text-pink-100 hover:text-white flex items-center gap-1 transition-colors cursor-pointer bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px]"
               >
-                <Lock className="w-3 h-3 text-pink-200" />
+                <Lock className="w-3 h-3 text-pink-200 shrink-0" />
                 สำหรับครู/แอดมิน
               </button>
             )}
@@ -104,13 +104,13 @@ export const Navbar: React.FC = () => {
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="flex items-center justify-between h-16 gap-2">
           {/* Logo & Center Title with Official Emblem */}
           <div
             id="brand-logo-btn"
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0 min-w-0 max-w-[65%] sm:max-w-none"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0 min-w-0"
           >
             {/* Official School Emblem Component */}
             <div className="p-1 rounded-xl bg-white border border-slate-200/90 shadow-2xs group-hover:scale-105 group-hover:shadow-xs transition-all overflow-hidden flex items-center justify-center shrink-0">
@@ -119,24 +119,24 @@ export const Navbar: React.FC = () => {
 
             <div className="min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1.5 flex-nowrap">
-                <h1 className="text-sm sm:text-base lg:text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap flex items-center gap-1">
+                <h1 className="text-sm sm:text-base lg:text-base xl:text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap flex items-center gap-1">
                   <span>ศูนย์พิงใจ</span>
                   <span className="text-[10px] sm:text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded-md whitespace-nowrap">
                     บ.ด.น.
                   </span>
                 </h1>
-                <span className="hidden xl:inline-flex whitespace-nowrap bg-gradient-to-r from-blue-50 via-sky-50 to-pink-50 text-blue-900 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-sky-200">
+                <span className="hidden 2xl:inline-flex whitespace-nowrap bg-gradient-to-r from-blue-50 via-sky-50 to-pink-50 text-blue-900 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-sky-200">
                   พิทักษ์สิทธิ & ความปลอดภัย
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 whitespace-nowrap truncate max-w-[160px] xs:max-w-[220px] sm:max-w-[280px] md:max-w-md">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 whitespace-nowrap truncate max-w-[150px] xs:max-w-[200px] sm:max-w-[260px] md:max-w-xs lg:max-w-[220px] xl:max-w-sm">
                 บริการให้คำปรึกษานักเรียน โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) นนทบุรี
               </p>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1.5">
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -145,7 +145,7 @@ export const Navbar: React.FC = () => {
                   key={item.id}
                   id={`nav-tab-${item.id}`}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-[11px] xl:text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 via-sky-600 to-pink-600 text-white font-semibold shadow-xs'
                       : item.highlight
@@ -153,10 +153,11 @@ export const Navbar: React.FC = () => {
                       : 'text-slate-600 hover:text-blue-700 hover:bg-sky-50/60'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
-                  {item.label}
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : ''}`} />
+                  <span className="hidden xl:inline">{item.fullLabel}</span>
+                  <span className="xl:hidden">{item.label}</span>
                   {item.id === 'booking' && !isActive && (
-                    <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
+                    <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse shrink-0" />
                   )}
                 </button>
               );
@@ -166,24 +167,24 @@ export const Navbar: React.FC = () => {
             <button
               id="nav-tab-admin"
               onClick={() => setActiveTab('admin')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ml-1 ${
+              className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-[11px] xl:text-xs font-medium transition-all cursor-pointer ml-0.5 whitespace-nowrap shrink-0 ${
                 activeTab === 'admin'
                   ? 'bg-slate-900 text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <Shield className="w-3.5 h-3.5 text-amber-500" />
-              ระบบหลังบ้าน
+              <Shield className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>ระบบหลังบ้าน</span>
               {pendingCount > 0 && (
-                <span className="w-4 h-4 bg-rose-600 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                <span className="w-4 h-4 bg-rose-600 text-white text-[10px] rounded-full flex items-center justify-center font-bold shrink-0">
                   {pendingCount}
                 </span>
               )}
             </button>
           </nav>
 
-          {/* Quick Tracking Search Box */}
-          <div className="hidden md:flex items-center">
+          {/* Quick Tracking Search Box (Shown on wider desktop) */}
+          <div className="hidden xl:flex items-center shrink-0">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 id="quick-tracking-search-input"
@@ -191,12 +192,12 @@ export const Navbar: React.FC = () => {
                 value={navSearchInput}
                 onChange={(e) => setNavSearchInput(e.target.value)}
                 placeholder="ค้นหารหัส BDN-XXXX..."
-                className="w-44 lg:w-48 pl-8 pr-12 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white text-slate-800 transition-all"
+                className="w-36 2xl:w-44 pl-7 pr-11 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white text-slate-800 transition-all"
               />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
               <button
                 type="submit"
-                className="absolute right-1 top-1 text-[10px] bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white px-2 py-0.5 rounded-lg font-medium cursor-pointer"
+                className="absolute right-1 top-1 text-[10px] bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white px-1.5 py-0.5 rounded-lg font-medium cursor-pointer"
               >
                 เช็ค
               </button>
@@ -204,7 +205,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden shrink-0">
             <button
               id="mobile-menu-toggle-btn"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -218,7 +219,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-2 shadow-md">
+        <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-2 shadow-md animate-fade-in">
           <form onSubmit={handleSearchSubmit} className="relative mb-3">
             <input
               type="text"
@@ -247,7 +248,7 @@ export const Navbar: React.FC = () => {
                     setActiveTab(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left cursor-pointer ${
+                  className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-colors text-left cursor-pointer ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 via-sky-600 to-pink-600 text-white font-semibold'
                       : item.highlight
@@ -256,10 +257,12 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4" />
-                    {item.label}
+                    <div className="w-5 flex justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span>{item.fullLabel}</span>
                   </div>
-                  {item.highlight && <Sparkles className="w-3.5 h-3.5 text-yellow-200" />}
+                  {item.highlight && <Sparkles className="w-3.5 h-3.5 text-yellow-200 shrink-0" />}
                 </button>
               );
             })}
@@ -269,18 +272,20 @@ export const Navbar: React.FC = () => {
                 setActiveTab('admin');
                 setMobileMenuOpen(false);
               }}
-              className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left cursor-pointer ${
+              className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-colors text-left cursor-pointer ${
                 activeTab === 'admin'
                   ? 'bg-slate-900 text-white font-semibold'
                   : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Shield className="w-4 h-4 text-amber-500" />
-                ระบบจัดการหลังบ้าน (ครู/แอดมิน)
+                <div className="w-5 flex justify-center shrink-0">
+                  <Shield className="w-4 h-4 text-amber-500" />
+                </div>
+                <span>ระบบจัดการหลังบ้าน (ครู/แอดมิน)</span>
               </div>
               {pendingCount > 0 && (
-                <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-bold">
+                <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-bold shrink-0">
                   {pendingCount} ใหม่
                 </span>
               )}

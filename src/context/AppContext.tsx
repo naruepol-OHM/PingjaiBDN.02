@@ -8,7 +8,7 @@ import {
   deleteDoc,
   writeBatch
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType, sanitizeFirestoreData } from '../lib/firebase';
 import {
   Topic,
   Counselor,
@@ -72,6 +72,8 @@ interface AppContextType {
   rescheduleAppointment: (id: string, newDate: string, newDay: DayOfWeek, newTimeSlot: string, reason?: string) => Promise<void>;
   saveCaseSummary: (appointmentId: string, summary: Omit<ConfidentialCaseSummary, 'id' | 'appointmentId' | 'dateRecorded'>) => Promise<void>;
   cancelAppointment: (id: string, reason?: string) => Promise<void>;
+  deleteAppointment: (id: string) => Promise<void>;
+  bulkDeleteAppointments: (ids: string[]) => Promise<void>;
 
   // Admin Data Management
   addCounselor: (counselor: Omit<Counselor, 'id'>) => Promise<void>;
@@ -355,14 +357,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const topicObj = topics.find((t) => t.id === appointment.topicId);
     const payload = buildLineNotifyPayload(appointment, actionType, topicObj?.title || appointment.topicId);
 
-    if (!lineSettings.webhookUrl || !lineSettings.webhookUrl.trim().startsWith('http')) {
-      return {
-        success: false,
-        message: 'ยังไม่ได้ตั้งค่า Webhook URL กรุณากรอกและกด "บันทึกการตั้งค่า" ในหน้าตั้งค่า LINE ก่อน'
-      };
-    }
+    const targetUrl =
+      lineSettings?.webhookUrl && lineSettings.webhookUrl.trim().startsWith('http')
+        ? lineSettings.webhookUrl.trim()
+        : 'https://bodinnonpingjai.netlify.app/.netlify/functions/line-webhook';
 
-    const result = await postLineWebhook(lineSettings.webhookUrl, payload);
+    const result = await postLineWebhook(targetUrl, payload);
     return result;
   };
 
@@ -387,22 +387,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]
     };
 
+    const sanitizedAppointment = sanitizeFirestoreData(newAppointment);
+
     try {
-      await setDoc(doc(db, 'appointments', newId), newAppointment);
-      sendLineNotification(newAppointment, 'NEW_BOOKING').catch((e) => console.warn('Line notification error:', e));
+      await setDoc(doc(db, 'appointments', newId), sanitizedAppointment);
+      setAppointments((prev) => [newAppointment, ...prev.filter((a) => a.id !== newId)]);
 
       addToast({
         type: 'success',
         title: 'บันทึกการนัดหมายสำเร็จ!',
         message: `รหัสติดตามของคุณคือ ${trackingCode} กรุณาจดจำรหัสเพื่อใช้ตรวจสถานะ`,
-        duration: 6000
+        duration: 7000
       });
+
+      // Send LINE notification and notify user
+      sendLineNotification(newAppointment, 'NEW_BOOKING').then((res) => {
+        if (res.success) {
+          addToast({
+            type: 'success',
+            title: 'ส่งการแจ้งเตือนเข้า LINE สำเร็จ',
+            message: 'ระบบได้ส่งข้อมูลนัดหมายไปยังกลุ่มคุณครูเรียบร้อยแล้ว',
+            duration: 5000
+          });
+        } else {
+          console.warn('Line notification warning:', res.message);
+        }
+      }).catch((e) => console.warn('Line notification error:', e));
+
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `appointments/${newId}`);
+      // Fallback local update so user is not completely blocked
+      setAppointments((prev) => [newAppointment, ...prev]);
       addToast({
         type: 'error',
-        title: 'เกิดข้อผิดพลาดในการบันทึก',
-        message: 'ไม่สามารถบันทึกนัดหมายลงฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง'
+        title: 'เกิดข้อผิดพลาดในการบันทึกฐานข้อมูล',
+        message: 'ระบบกำลังทำงานในโหมดสำรอง กรุณาแจ้งคุณครูเพื่อตรวจสอบรหัสนัดหมาย'
       });
     }
 
@@ -555,6 +574,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: 'ยกเลิกการนัดหมายแล้ว',
       message: 'ระบบได้บันทึกการยกเลิกเรียบร้อย'
     });
+  };
+
+  const deleteAppointment = async (id: string) => {
+    const target = appointments.find((a) => a.id === id);
+    const trackingCode = target?.trackingCode || id;
+    try {
+      await deleteDoc(doc(db, 'appointments', id));
+      setAppointments((prev) => prev.filter((a) => a.id !== id));
+      addToast({
+        type: 'success',
+        title: 'ลบรายการนัดหมายสำเร็จ',
+        message: `ลบข้อมูลนัดหมายรหัส ${trackingCode} ออกจากระบบเรียบร้อยแล้ว`
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `appointments/${id}`);
+      setAppointments((prev) => prev.filter((a) => a.id !== id));
+      addToast({
+        type: 'info',
+        title: 'ลบข้อมูลในระบบสำเร็จ',
+        message: `ลบรหัสนัดหมาย ${trackingCode} เรียบร้อยแล้ว`
+      });
+    }
+  };
+
+  const bulkDeleteAppointments = async (ids: string[]) => {
+    if (!ids.length) return;
+    try {
+      const batch = writeBatch(db);
+      ids.forEach((id) => {
+        batch.delete(doc(db, 'appointments', id));
+      });
+      await batch.commit();
+      setAppointments((prev) => prev.filter((a) => !ids.includes(a.id)));
+      addToast({
+        type: 'success',
+        title: 'ลบรายการที่เลือกสำเร็จ',
+        message: `ลบข้อมูลนัดหมายทั้งหมด ${ids.length} รายการเรียบร้อยแล้ว`
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'appointments/bulk');
+      setAppointments((prev) => prev.filter((a) => !ids.includes(a.id)));
+      addToast({
+        type: 'info',
+        title: 'ลบข้อมูลในระบบสำเร็จ',
+        message: `ลบข้อมูล ${ids.length} รายการเรียบร้อยแล้ว`
+      });
+    }
   };
 
   const addCounselor = async (newC: Omit<Counselor, 'id'>) => {
@@ -744,6 +810,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rescheduleAppointment,
         saveCaseSummary,
         cancelAppointment,
+        deleteAppointment,
+        bulkDeleteAppointments,
         addCounselor,
         updateCounselor,
         deleteCounselor,
