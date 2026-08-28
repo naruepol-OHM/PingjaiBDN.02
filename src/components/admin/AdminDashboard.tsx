@@ -69,6 +69,7 @@ export const AdminDashboard: React.FC = () => {
   // Login form state
   const [passcode, setPasscode] = useState('');
   const [loginError, setLoginError] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Filters for appointments
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -109,9 +110,12 @@ export const AdminDashboard: React.FC = () => {
     });
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = loginAdmin(passcode);
+    setIsLoggingIn(true);
+    setLoginError(false);
+    const success = await loginAdmin(passcode);
+    setIsLoggingIn(false);
     if (!success) {
       setLoginError(true);
     }
@@ -339,10 +343,11 @@ export const AdminDashboard: React.FC = () => {
             <button
               id="admin-login-submit-btn"
               type="submit"
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+              disabled={isLoggingIn}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <KeyRound className="w-4 h-4 text-slate-300" />
-              เข้าสู่ระบบหลังบ้าน
+              {isLoggingIn ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบหลังบ้าน'}
             </button>
           </form>
 
