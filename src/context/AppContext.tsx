@@ -8,7 +8,12 @@ import {
   deleteDoc,
   writeBatch
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, sanitizeFirestoreData } from '../lib/firebase';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
+import { db, auth, handleFirestoreError, OperationType, sanitizeFirestoreData } from '../lib/firebase';
 import {
   Topic,
   Counselor,
@@ -63,7 +68,7 @@ interface AppContextType {
   // Admin Authentication
   isAdminAuthenticated: boolean;
   adminRoleName: string;
-  loginAdmin: (passcode: string) => boolean;
+  loginAdmin: (passcode: string) => Promise<boolean>;
   logoutAdmin: () => void;
 
   // Appointment Actions
@@ -100,7 +105,11 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const ADMIN_SESSION_KEY = 'bdn_pingjai_admin_auth_session';
+// Fixed Firebase Auth account used for the shared teacher/admin login.
+// The admin still only types the school PIN in the UI; that PIN is used
+// as the password for this single Firebase Auth user so Firestore rules
+// can verify request.auth != null before allowing writes.
+const ADMIN_EMAIL = 'admin@bdn-pingjai.local';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [topics, setTopics] = useState<Topic[]>(INITIAL_TOPICS);
@@ -118,10 +127,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedGradeLevelForBooking, setSelectedGradeLevelForBooking] = useState<GradeLevel | null>(null);
   const [trackingQuery, setTrackingQuery] = useState<string>('');
 
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-  });
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [adminRoleName, setAdminRoleName] = useState<string>('ครูผู้ดูแลระบบศูนย์พิงใจ');
+
+  // Keep isAdminAuthenticated in sync with the real Firebase Auth session
+  // (handles page reloads, other tabs, and token expiry correctly).
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAdminAuthenticated(!!user);
+      if (user) {
+        setAdminRoleName('คณะกรรมการศูนย์พิงใจ บ.ด.น.');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -147,24 +166,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       counselorsRef,
       (snapshot) => {
         setIsDbConnected(true);
-        if (snapshot.empty) {
-          // Auto-seed initial counselors to Firestore
-          const batch = writeBatch(db);
-          INITIAL_COUNSELORS.forEach((c) => {
-            const docRef = doc(db, 'counselors', c.id);
-            batch.set(docRef, c);
-          });
-          batch.commit().catch((err) => {
-            handleFirestoreError(err, OperationType.WRITE, 'counselors');
-          });
-        } else {
-          const loaded: Counselor[] = [];
-          snapshot.forEach((d) => {
-            loaded.push(d.data() as Counselor);
-          });
-          // Sort alphabetically or keep consistent
-          setCounselors(loaded);
-        }
+        // NOTE: we intentionally do NOT auto-reseed INITIAL_COUNSELORS when
+        // the collection is empty anymore. That behaviour used to silently
+        // overwrite real admin edits with hardcoded starter data any time
+        // the collection was (or briefly appeared) empty. Seeding should
+        // only ever be done once, deliberately, via a one-off setup script.
+        const loaded: Counselor[] = [];
+        snapshot.forEach((d) => {
+          loaded.push(d.data() as Counselor);
+        });
+        setCounselors(loaded);
       },
       (error) => {
         setIsDbConnected(false);
@@ -180,23 +191,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribe = onSnapshot(
       topicsRef,
       (snapshot) => {
-        if (snapshot.empty) {
-          const batch = writeBatch(db);
-          INITIAL_TOPICS.forEach((t) => {
-            const docRef = doc(db, 'topics', t.id);
-            batch.set(docRef, t);
-          });
-          batch.commit().catch((err) => {
-            handleFirestoreError(err, OperationType.WRITE, 'topics');
-          });
-        } else {
-          const loaded: Topic[] = [];
-          snapshot.forEach((d) => {
-            loaded.push(d.data() as Topic);
-          });
-          loaded.sort((a, b) => (a.numericId || 0) - (b.numericId || 0));
-          setTopics(loaded);
-        }
+        // See the counselors listener above: no more auto-reseed on empty.
+        const loaded: Topic[] = [];
+        snapshot.forEach((d) => {
+          loaded.push(d.data() as Topic);
+        });
+        loaded.sort((a, b) => (a.numericId || 0) - (b.numericId || 0));
+        setTopics(loaded);
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'topics');
@@ -211,25 +212,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribe = onSnapshot(
       timetableRef,
       (snapshot) => {
-        if (snapshot.empty) {
-          const batch = writeBatch(db);
-          INITIAL_TIMETABLE.forEach((item) => {
-            const docRef = doc(db, 'timetable', item.id);
-            batch.set(docRef, item);
-          });
-          batch.commit().catch((err) => {
-            handleFirestoreError(err, OperationType.WRITE, 'timetable');
-          });
-        } else {
-          const loaded: TimetableEntry[] = [];
-          snapshot.forEach((d) => {
-            loaded.push(d.data() as TimetableEntry);
-          });
-          // Sort Mon -> Fri
-          const dayOrder = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์'];
-          loaded.sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
-          setTimetable(loaded);
-        }
+        // See the counselors listener above: no more auto-reseed on empty.
+        const loaded: TimetableEntry[] = [];
+        snapshot.forEach((d) => {
+          loaded.push(d.data() as TimetableEntry);
+        });
+        // Sort Mon -> Fri
+        const dayOrder = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์'];
+        loaded.sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+        setTimetable(loaded);
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'timetable');
@@ -244,23 +235,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribe = onSnapshot(
       appointmentsRef,
       (snapshot) => {
-        if (snapshot.empty) {
-          const batch = writeBatch(db);
-          INITIAL_APPOINTMENTS.forEach((apt) => {
-            const docRef = doc(db, 'appointments', apt.id);
-            batch.set(docRef, apt);
-          });
-          batch.commit().catch((err) => {
-            handleFirestoreError(err, OperationType.WRITE, 'appointments');
-          });
-        } else {
-          const loaded: Appointment[] = [];
-          snapshot.forEach((d) => {
-            loaded.push(d.data() as Appointment);
-          });
-          loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setAppointments(loaded);
-        }
+        // See the counselors listener above: no more auto-reseed on empty.
+        // This one matters most: silently re-writing INITIAL_APPOINTMENTS
+        // (fake demo bookings) over real student appointment data would be
+        // a serious data-integrity problem, not just a cosmetic one.
+        const loaded: Appointment[] = [];
+        snapshot.forEach((d) => {
+          loaded.push(d.data() as Appointment);
+        });
+        loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setAppointments(loaded);
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'appointments');
@@ -311,18 +295,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  const loginAdmin = (passcode: string): boolean => {
-    if (passcode === 'Bdn@123') {
-      setIsAdminAuthenticated(true);
-      setAdminRoleName('คณะกรรมการศูนย์พิงใจ บ.ด.น.');
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+  const loginAdmin = async (passcode: string): Promise<boolean> => {
+    try {
+      // The PIN the teacher types is used as the password for a single
+      // shared Firebase Auth account. This gives us a real request.auth
+      // token for Firestore rules while keeping the same simple "one PIN"
+      // login UX as before.
+      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, passcode);
       addToast({
         type: 'success',
         title: 'เข้าสู่ระบบหลังบ้านสำเร็จ',
         message: 'ยินดีต้อนรับคณะครูและผู้ดูแลระบบศูนย์พิงใจ'
       });
       return true;
-    } else {
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'auth/login');
       addToast({
         type: 'error',
         title: 'รหัสผ่านไม่ถูกต้อง',
@@ -333,8 +320,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logoutAdmin = () => {
-    setIsAdminAuthenticated(false);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    signOut(auth).catch((err) => {
+      handleFirestoreError(err, OperationType.GET, 'auth/logout');
+    });
     addToast({
       type: 'info',
       title: 'ออกจากระบบแล้ว',
