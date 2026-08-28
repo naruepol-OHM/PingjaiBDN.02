@@ -8,27 +8,37 @@ service cloud.firestore {
 
     match /counselors/{counselorId} {
       allow read: if true;
-      allow create, update, delete: if isValidId(counselorId);
+      allow create, update, delete: if request.auth != null && isValidId(counselorId);
     }
 
     match /topics/{topicId} {
       allow read: if true;
-      allow create, update, delete: if isValidId(topicId);
+      allow create, update, delete: if request.auth != null && isValidId(topicId);
     }
 
     match /timetable/{timetableId} {
       allow read: if true;
-      allow create, update, delete: if isValidId(timetableId);
+      allow create, update, delete: if request.auth != null && isValidId(timetableId);
     }
 
     match /appointments/{appointmentId} {
+      // Public read is needed so students can track their own booking by
+      // tracking code, and so counselors can confirm/update status from a
+      // LINE link without logging into the admin panel.
       allow read: if true;
-      allow create, update, delete: if isValidId(appointmentId);
+      allow create: if isValidId(appointmentId);
+      // Status updates (confirm / in-session / complete / reschedule) stay
+      // public because the counselor LINE-link feature relies on them and
+      // has no admin login step by design.
+      allow update: if isValidId(appointmentId);
+      // Deleting/bulk-deleting an appointment only ever happens from the
+      // signed-in admin dashboard, so this requires a real login.
+      allow delete: if request.auth != null && isValidId(appointmentId);
     }
 
     match /settings/{settingId} {
       allow read: if true;
-      allow create, update, delete: if isValidId(settingId);
+      allow create, update, delete: if request.auth != null && isValidId(settingId);
     }
 
     match /{document=**} {
