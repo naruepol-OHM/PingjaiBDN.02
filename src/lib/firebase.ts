@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -8,6 +9,19 @@ export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true
 });
 export const storage = getStorage(app);
+
+// Real Firebase Authentication for the admin/teacher back-office.
+// Firestore security rules now require request.auth != null to write,
+// so every admin action must go through a signed-in Firebase user
+// instead of a client-side passcode check.
+export const auth = getAuth(app);
+
+// Session-only persistence: matches the previous sessionStorage-based
+// behaviour (log out automatically when the browser tab/window closes),
+// which is the right default for a shared school computer.
+setPersistence(auth, browserSessionPersistence).catch((err) => {
+  console.error('Failed to set Firebase Auth persistence:', err);
+});
 
 export function sanitizeFirestoreData<T extends Record<string, any>>(data: T): T {
   const cleaned: any = {};
